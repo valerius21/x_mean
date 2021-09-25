@@ -1,5 +1,5 @@
 # x_k+1 | k
-from data_fusion.utils.data import base_data
+from data_fusion.utils.data import base_data, get_x_y_vx_vy_row_gt
 import numpy as np
 
 from data_fusion.utils.helpers import reduce_measurement
@@ -103,3 +103,7 @@ def update_predictions_basic_kalman():
         collector.append([x_meas[0][0], x_meas[1][0]])
 
     return np.asarray(collector, dtype=float)
+
+
+if __name__ == '__main__':
+    update_predictions_basic_kalman()

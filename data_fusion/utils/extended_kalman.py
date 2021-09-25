@@ -1,4 +1,4 @@
-from numpy import np
+import numpy as np
 from sympy import Matrix, sin, cos, acos, simplify, Inverse
 from sympy.abc import x, y, r, q, v, alpha
 import math
@@ -14,7 +14,7 @@ Init / Base values
 vx_init = base_data[0]['vx']
 vy_init = base_data[0]['vy']
 v_val = np.sqrt(vx_init ** 2 + vy_init ** 2)
-alpha_val = acos(vx_init / v)
+alpha_val = acos(vx_init / v_val)
 q_ekf = np.array([[.125], [.125], [.5], [.5]])
 cww = q_ekf @ ((sigma ** 2) * q_ekf.T)
 
@@ -47,14 +47,14 @@ def ekf_state(index: int):
     current_data = base_data[index]
     return np.array([
         # X1
-        current_data['x'],
+        [current_data['x']],
         # X2
-        current_data['y'],
+        [current_data['y']],
         # v_h
-        v_val,
+        [v_val],
         # alpha_h
-        alpha_val
-    ]).T
+        [alpha_val]
+    ])
 
 
 def ekf_y(index: int):
@@ -78,8 +78,8 @@ def ekf_prediction_x(state):
     :param state:
     :return:
     """
-    xx = state[0]
-    yy = state[1]
+    xx = state[0][0]
+    yy = state[1][0]
     res = a.subs({'x': xx,
                   'y': yy,
                   'v': v_val,
@@ -89,7 +89,7 @@ def ekf_prediction_x(state):
     )
 
 
-def ekf_prediction_c(state, cxx):
+def ekf_prediction_c(cxx):
     """
     :param state: TODO(bianca):???
     :param cxx:
@@ -109,7 +109,9 @@ def measurement_y_k(state, rr, qq):
     xx = state[0]
     yy = state[1]
 
-    return h.subs({'x': xx, 'y': yy, 'r': rr, 'q': qq})
+    # TODO(bianca): Jacobian h or Jacobian H or H or h?
+    # return h.subs({'x': xx, 'y': yy, 'r': rr, 'q': qq})
+    return H_x(rr, qq, v_val, alpha_val)
 
 
 def K(cxx, H):
@@ -121,7 +123,7 @@ def K(cxx, H):
 
 def ekf_measurement_x(x_predict, y_k, y_k_mean, K):
     # [[x, y, v, alpha]] = x_predict.T
-    return x_predict + K @ (y_k - y_k_mean)
+    return x_predict + K @ (y_k - y_k_mean)  # TODO(bianca): Matrix Size Mismatch
 
 
 def ekf_measurement_c(cxx, K):
@@ -171,20 +173,22 @@ a = Matrix([
     [alpha]
 ]).T
 
-a.subs({'x': ekf_state(0)[0], 'y': ekf_state(0)[1], 'v_h': v_val, 'alpha_h': alpha_val})
-
 derivatives_a = [x, y, v, alpha]
 
 A = a.jacobian(derivatives_a)
 
+a.subs({'x': ekf_state(0)[0], 'y': ekf_state(0)[1], 'v': v_val, 'alpha': alpha_val})
+
 # https://stackoverflow.com/questions/39753260/sympy-to-numpy-causes-the-attributeerror-symbol-object-has-no-attribute-cos
 # float is not a solution cuz same thing happens
-A_x = A.subs({'v_h': v_val, 'alpha_h': alpha_val})
+A_x = A.subs({'v': v_val, 'alpha': alpha_val})
 
 """
 H matrix
+
 """
 
+# TODO(bianca): Reihenfolge OK?
 h = Matrix([
     x,
     y,
@@ -196,3 +200,32 @@ h = Matrix([
 
 derivatives_h = [x, y, r, q]
 H = simplify(h.jacobian(derivatives_h))
+
+if __name__ == '__main__':
+    def update_predictions():
+        c_meas = cxx_init
+        x_meas = ekf_state(0)
+
+        collector = []
+
+        for i in range(37):
+            state = ekf_state(i)  # get x, y
+            x_pred = ekf_prediction_x(x_meas)  # calc a(^x^)
+            c_pred = ekf_prediction_c(c_meas)  # calc c with A_x and c init
+
+            [rr, qq] = r_fn(i)  # calc r1 and r2 (difference between object and ego_pose)
+
+            y_k = measurement_y_k(state, rr, qq)  # calculate h(x)
+            y_k_mean = measurement_y_k(x_pred, rr, qq)  # calc h(^x^)
+            H_jac = H_x(rr, qq, v_val, alpha_val)
+            kalman = K(c_pred, H_jac)
+            x_meas = ekf_measurement_x(x_pred, y_k, y_k_mean, kalman)
+            c_meas = ekf_measurement_c(c_pred, kalman)
+            pred = np.array([x_meas[0], x_meas[1]])
+            collector.append(pred)
+
+        return np.array(collector, dtype=float)
+
+
+    predictions = update_predictions()
+    predictions

@@ -5,6 +5,13 @@ import numpy as np
 from data_fusion.utils.data import base_data
 
 
+class NoRowException(Exception):
+    """
+    Raise, when there is no fitting data for a current timestamp.
+    """
+    pass
+
+
 def get_point_coords_from_v_comp(vx_comp, vy_comp, ego_x_coord, ego_y_coord, vehicle_x, vehicle_y):
     delta_x = vehicle_x - ego_x_coord
     delta_y = vehicle_y - ego_y_coord
@@ -20,6 +27,10 @@ def reduce_measurement(row_index: int):
     """
     row = [e for e in base_data if e['row'] == row_index]
 
+    if not row:
+        # raise NoRowException("No rows for this index!")
+        return []
+
     return {
         'x': mean([e['x'] for e in row]),
         'y': mean([e['y'] for e in row]),
@@ -28,7 +39,3 @@ def reduce_measurement(row_index: int):
         'gt_x': row[0]['gt_x'],
         'gt_y': row[0]['gt_y']
     }
-
-
-
-
