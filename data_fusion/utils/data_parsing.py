@@ -4,10 +4,10 @@ from pyquaternion import Quaternion
 
 import numpy as np
 
-from data_fusion.definitions import VERSION, DATAROOT
+from data_fusion.definitions import VERSION, DATASET
 from data_fusion.utils.binary_files import convert_binary_data_to_coordinates_and_velocity, extract_samples_from_scene
 
-nusc = NuScenes(version=VERSION, dataroot=DATAROOT, verbose=True)
+nusc = NuScenes(version=VERSION, dataroot=DATASET, verbose=True)
 sc = nusc.scene[0]
 
 samples_from_scene = extract_samples_from_scene(sc)

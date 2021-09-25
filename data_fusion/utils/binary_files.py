@@ -1,6 +1,6 @@
 from nuscenes.utils.data_classes import RadarPointCloud
 
-from data_fusion.definitions import nusc, DATAROOT
+from data_fusion.definitions import nusc, DATASET
 
 """
 # Exercise 1
@@ -28,7 +28,7 @@ def get_pcd_data(nusc_filepath: str):
 
 def extract_channel_from_file(channel: str):
     filename = nusc.get('sample_data', channel)['filename']
-    filename = f'{DATAROOT}/{filename}'
+    filename = f'{DATASET}/{filename}'
     return get_pcd_data(filename)
 
 
