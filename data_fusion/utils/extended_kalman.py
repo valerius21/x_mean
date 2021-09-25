@@ -78,6 +78,7 @@ def ekf_prediction_x(state):
     :param state:
     :return:
     """
+    state = np.asarray(state, dtype=float)
     xx = state[0][0]
     yy = state[1][0]
     res = a.subs({'x': xx,
@@ -91,7 +92,6 @@ def ekf_prediction_x(state):
 
 def ekf_prediction_c(cxx):
     """
-    :param state: TODO(bianca):???
     :param cxx:
     :return:
     """
@@ -106,16 +106,13 @@ def measurement_y_k(state, rr, qq):
     :param qq:
     :return:
     """
-    xx = state[0]
-    yy = state[1]
-
-    # TODO(bianca): Jacobian h or Jacobian H or H or h?
-    # return h.subs({'x': xx, 'y': yy, 'r': rr, 'q': qq})
-    return H_x(rr, qq, v_val, alpha_val)
+    xx = state[0][0]
+    yy = state[1][0]
+    res = h.subs({'x': xx, 'y': yy, 'r': rr, 'q': qq, 'v': v_val, 'alpha': alpha_val})
+    return res
 
 
 def K(cxx, H):
-    print('[K] cxx', cxx)
     m = Matrix(H @ cxx @ H.T + cvv)
 
     return cxx @ H.T @ Inverse(m)
@@ -126,7 +123,7 @@ def ekf_measurement_x(x_predict, y_k, y_k_mean, K):
     return x_predict + K @ (y_k - y_k_mean)  # TODO(bianca): Matrix Size Mismatch
 
 
-def ekf_measurement_c(cxx, K):
+def ekf_measurement_c(cxx, K, H):
     return cxx - K @ H @ cxx
 
 
@@ -140,7 +137,6 @@ def r_fn(index: int):
 
 def H_x(r_h, q_h, v_h, alpha_h):
     """
-    TODO(valerius): refactor
     :param r_h:
     :param q_h:
     :param v_h:
@@ -167,10 +163,10 @@ A Matrix
 """
 
 a = Matrix([
-    [x + .5 * v * cos(alpha)],
-    [y + .5 * v * sin(alpha)],
-    [v],
-    [alpha]
+    x + .5 * v * cos(alpha),
+    y + .5 * v * sin(alpha),
+    v,
+    alpha
 ]).T
 
 derivatives_a = [x, y, v, alpha]
@@ -188,7 +184,6 @@ H matrix
 
 """
 
-# TODO(bianca): Reihenfolge OK?
 h = Matrix([
     x,
     y,
@@ -214,17 +209,18 @@ if __name__ == '__main__':
             c_pred = ekf_prediction_c(c_meas)  # calc c with A_x and c init
 
             [rr, qq] = r_fn(i)  # calc r1 and r2 (difference between object and ego_pose)
-
+            rr = rr[0]
+            qq = qq[0]
             y_k = measurement_y_k(state, rr, qq)  # calculate h(x)
             y_k_mean = measurement_y_k(x_pred, rr, qq)  # calc h(^x^)
             H_jac = H_x(rr, qq, v_val, alpha_val)
             kalman = K(c_pred, H_jac)
             x_meas = ekf_measurement_x(x_pred, y_k, y_k_mean, kalman)
-            c_meas = ekf_measurement_c(c_pred, kalman)
+            c_meas = ekf_measurement_c(c_pred, kalman, H_jac)
             pred = np.array([x_meas[0], x_meas[1]])
             collector.append(pred)
 
-        return np.array(collector, dtype=float)
+        return np.array(collector, dtype=object)
 
 
     predictions = update_predictions()
