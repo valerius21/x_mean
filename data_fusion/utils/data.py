@@ -44,6 +44,8 @@ def get_x_y_vx_vy_row_gt(count: int):
                 'y': y[i],
                 'vx': vx[i],
                 'vy': vy[i],
+                'v': np.sqrt(vx[i] ** 2 + vy[i] ** 2),
+                'alpha': np.arccos(vx[i] / np.sqrt(vx[i] ** 2 + vy[i] ** 2)),
                 'row': count,
                 'gt_x': veh_coords_x[count],
                 'gt_y': veh_coords_y[count]
