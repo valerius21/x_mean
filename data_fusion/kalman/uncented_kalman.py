@@ -12,6 +12,7 @@ Constants
 k = 1
 alpha = 10e-3
 beta = 2
+R_K = np.eye(4)
 
 """
 Functions
@@ -118,13 +119,13 @@ def calc_z_mean(index: int, sigma: np.ndarray):
 
     :return:
     """
-    z_mean = []
+    z_calc = []
     wa = calc_weights_wa()
     z = calc_z(index, sigma)
     for i, row in enumerate(z):
-        z_mean.append(wa[i] * row)
+        z_calc.append(wa[i] * row)
 
-    return sum(z_mean)
+    return sum(z_calc)
 
 
 def calc_cross_covariance():
@@ -164,11 +165,20 @@ def c_update():
     raise Exception("Not implemented")
 
 
-def s_covariance():
+def s_covariance(z: np.ndarray, z_mean: np.ndarray):
     """
     Covariance of transformed points
 
     :return:
     """
 
-    raise Exception("Not implemented")
+    wc = calc_weights_wc()
+    acc = np.zeros((4, 4))
+
+    for i, zz in enumerate(z):
+        nz = zz.reshape(4, 1)
+        nz_mean = z_mean.reshape(4, 1)
+        rz = nz - nz_mean
+        acc += wc[i] * (rz @ rz.T)
+
+    return acc + R_K
