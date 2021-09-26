@@ -10,6 +10,16 @@ avg_x, avg_y = [], []
 _result_iterator = iter(result)
 
 
+def _append_new_avg_coordinates(new_x, new_y):
+    len_x, len_y = len(new_x), len(new_y)
+    if len_x == 0 or len_y == 0:
+        return
+    ax = sum(new_x) / len(new_x)
+    ay = sum(new_y) / len(new_y)
+    avg_x.append(ax)
+    avg_y.append(ay)
+
+
 def get_x_y_vx_vy_row_gt(count: int):
     collector = []
     try:
@@ -54,11 +64,7 @@ def get_x_y_vx_vy_row_gt(count: int):
 
     new_x = ([t[0] for t in coords])
     new_y = ([t[1] for t in coords])
-    new_x = sum(new_x) / len(new_x)
-    new_y = sum(new_y) / len(new_y)
-    avg_x.append(new_x)
-    avg_y.append(new_y)
-
+    _append_new_avg_coordinates(new_x, new_y)
     return collector
 
 
@@ -66,4 +72,5 @@ _bd = [get_x_y_vx_vy_row_gt(i) for i in range(SCENE_LENGTH)]
 base_data = list(itertools.chain(*_bd))
 
 if __name__ == '__main__':
-    print(len(base_data))
+    current_samples = [r['row'] for r in list(itertools.chain(*_bd))]
+

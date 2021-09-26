@@ -2,7 +2,7 @@ from statistics import mean
 
 import numpy as np
 
-from data_fusion.utils.data import base_data
+from data_fusion.definitions import SCENE_LENGTH
 
 
 class NoRowException(Exception):
@@ -21,21 +21,26 @@ def get_point_coords_from_v_comp(vx_comp, vy_comp, ego_x_coord, ego_y_coord, veh
     return ego_x_coord, ego_y_coord, delta_x / scalar, delta_y / scalar
 
 
-def reduce_measurement(row_index: int):
+def reduce_measurement(row_index: int, base_data):
     """
     average all measurements and return it with ground truth
     """
     row = [e for e in base_data if e['row'] == row_index]
 
     if not row:
-        # raise NoRowException("No rows for this index!")
-        return []
+        # raise Exception("No rows for this index!")
+        return {}
+    try:
+        res = {
+            'x': mean([e['x'] for e in row]),
+            'y': mean([e['y'] for e in row]),
+            'vx': mean([e['vx'] for e in row]),
+            'vy': mean([e['vy'] for e in row]),
+            'gt_x': row[0]['gt_x'],
+            'gt_y': row[0]['gt_y']
+        }
+    except ZeroDivisionError as ze:
+        print('[reduce_measurement] ZeroDivision')
+        raise ze
 
-    return {
-        'x': mean([e['x'] for e in row]),
-        'y': mean([e['y'] for e in row]),
-        'vx': mean([e['vx'] for e in row]),
-        'vy': mean([e['vy'] for e in row]),
-        'gt_x': row[0]['gt_x'],
-        'gt_y': row[0]['gt_y']
-    }
+    return res

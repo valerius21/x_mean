@@ -6,6 +6,7 @@ import math
 from data_fusion.utils.basic_kalman import sigma
 from data_fusion.utils.data import base_data
 from data_fusion.utils.data_parsing import result
+from data_fusion.utils.helpers import reduce_measurement
 
 """
 Init / Base values
@@ -44,7 +45,9 @@ def ekf_state(index: int):
     """
     given an index, return the state $x = [x_1 x_2 v_h \alpha]^T$.
     """
-    current_data = base_data[index]
+    current_data = reduce_measurement(index, base_data)
+    if not current_data:
+        return []
     return np.array([
         # X1
         [current_data['x']],
@@ -57,24 +60,9 @@ def ekf_state(index: int):
     ])
 
 
-def ekf_y(index: int):
-    """
-
-    :param index:
-    :return:
-    """
-    cd = base_data[index]
-    return np.array([
-        cd['x'],
-        cd['y'],
-        cd['vx'],
-        cd['vy']
-    ])
-
-
 def ekf_prediction_x(state):
     """
-
+    A with old predictions
     :param state:
     :return:
     """
@@ -128,6 +116,11 @@ def ekf_measurement_c(cxx, K, H):
 
 
 def r_fn(index: int):
+    """
+    aka $object - egopose$
+    :param index:
+    :return:
+    """
     [x_r, y_r, _, _] = ekf_state(index)
     row = result[index]
     s_x = row[6][0]  # ego pose
@@ -173,8 +166,6 @@ derivatives_a = [x, y, v, alpha]
 
 A = a.jacobian(derivatives_a)
 
-a.subs({'x': ekf_state(0)[0], 'y': ekf_state(0)[1], 'v': v_val, 'alpha': alpha_val})
-
 # https://stackoverflow.com/questions/39753260/sympy-to-numpy-causes-the-attributeerror-symbol-object-has-no-attribute-cos
 # float is not a solution cuz same thing happens
 A_x = A.subs({'v': v_val, 'alpha': alpha_val})
@@ -188,7 +179,7 @@ h = Matrix([
     x,
     y,
     r * ((v * cos(alpha) * r + v * sin(alpha) * q) / (r ** 2 + q ** 2)),
-    q * ((v * cos(alpha) + v * sin(alpha) * q) / (r ** 2 + q ** 2))
+    q * ((v * cos(alpha) * r + v * sin(alpha) * q) / (r ** 2 + q ** 2))
 ])
 
 # h_x = lambdify((x,y,r_h,q_h) , h)
@@ -211,6 +202,7 @@ if __name__ == '__main__':
             [rr, qq] = r_fn(i)  # calc r1 and r2 (difference between object and ego_pose)
             rr = rr[0]
             qq = qq[0]
+
             y_k = measurement_y_k(state, rr, qq)  # calculate h(x)
             y_k_mean = measurement_y_k(x_pred, rr, qq)  # calc h(^x^)
             H_jac = H_x(rr, qq, v_val, alpha_val)

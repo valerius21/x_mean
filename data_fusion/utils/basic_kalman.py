@@ -92,7 +92,9 @@ def update_predictions_basic_kalman():
         # -> prediction
 
         # Measurement Update <- Measurement
-        rm = reduce_measurement(i)
+        rm = reduce_measurement(i, base_data)
+        if not rm:
+            continue
         gt_x, gt_y = rm['x'], rm['y']
 
         K = calc_kalman_gain(cxx_prediction)
