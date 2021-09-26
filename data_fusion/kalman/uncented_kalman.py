@@ -144,14 +144,27 @@ def kalman_gain():
     raise Exception("Not implemented")
 
 
-def x_prediction(sigma: np.ndarray):
-    wa = calc_weights_wa()
-    x_acc = np.zeros(4)
-    for i, s_row in enumerate(sigma.T):
+def x_prepare(sigma: np.ndarray):
+    x_acc = []
+    for s_row in sigma.T:
         [xx, yy, _, _] = s_row
-        x_acc += wa[i] * a_x(xx, yy)
+        x_acc.append(a_x(xx, yy).reshape(1, 4))
+
+    return np.array(x_acc, dtype=float)
+
+
+def x_prediction(x_prep: np.ndarray):
+    wa = calc_weights_wa()
+    x_acc = np.zeros((4, 1))
+
+    for i, prep in enumerate(x_prep):
+        x_acc += wa[i] * prep.reshape(4, 1)
 
     return x_acc.reshape(4, 1)
+
+
+def c_prediction():
+    pass
 
 
 def x_update():
