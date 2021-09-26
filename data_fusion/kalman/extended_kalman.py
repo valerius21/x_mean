@@ -3,7 +3,7 @@ from sympy import Matrix, sin, cos, acos, simplify, Inverse
 from sympy.abc import x, y, r, q, v, alpha
 import math
 
-from data_fusion.utils.basic_kalman import sigma
+from data_fusion.kalman.basic_kalman import sigma
 from data_fusion.utils.data import base_data
 from data_fusion.utils.data_parsing import result
 from data_fusion.utils.helpers import reduce_measurement
