@@ -69,10 +69,7 @@ def ekf_prediction_x(state):
     state = np.asarray(state, dtype=float)
     xx = state[0][0]
     yy = state[1][0]
-    res = a.subs({'x': xx,
-                  'y': yy,
-                  'v': v_val,
-                  'alpha': alpha_val}).T
+    res = a_x(xx, yy)
     return np.asarray(
         res,
         dtype=float
@@ -107,6 +104,17 @@ def h_x(xx, yy, rr, qq):
                    'q': qq,
                    'v': v_val,
                    'alpha': alpha_val})
+
+
+def a_x(xx, yy):
+    res = a.subs({
+        'x': xx,
+        'y': yy,
+        'v': v_val,
+        'alpha': alpha_val
+    })
+
+    return np.asarray(res, dtype=float).reshape(4, 1)
 
 
 def K(cxx, H):

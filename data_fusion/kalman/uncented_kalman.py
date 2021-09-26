@@ -1,8 +1,6 @@
-from functools import reduce
-
 import numpy as np
 
-from data_fusion.kalman.extended_kalman import h_x
+from data_fusion.kalman.extended_kalman import h_x, a_x
 from data_fusion.utils.data_parsing import result
 
 """
@@ -144,6 +142,16 @@ def kalman_gain():
     :return:
     """
     raise Exception("Not implemented")
+
+
+def x_prediction(sigma: np.ndarray):
+    wa = calc_weights_wa()
+    x_acc = np.zeros(4)
+    for i, s_row in enumerate(sigma.T):
+        [xx, yy, _, _] = s_row
+        x_acc += wa[i] * a_x(xx, yy)
+
+    return x_acc.reshape(4, 1)
 
 
 def x_update():
