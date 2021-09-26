@@ -1,3 +1,5 @@
+from functools import reduce
+
 import numpy as np
 
 from data_fusion.kalman.extended_kalman import h_x
@@ -47,10 +49,10 @@ def calc_weights_wa():
     """
     wa = list()
 
-    wa[0] = (alpha ** 2 * k - 4) / (alpha ** 2 * k)  # 4 is a dimension
+    wa.append((alpha ** 2 * k - 4) / (alpha ** 2 * k))  # 4 is a dimension
     for i in range(1, 9):
-        wa[i] = 1. / 2 * alpha ** 2 * k
-    return np.array(wa)
+        wa.append(1. / 2 * alpha ** 2 * k)
+    return np.array(wa, dtype=float)
 
 
 def calc_weights_wc():
@@ -63,10 +65,10 @@ def calc_weights_wc():
 
     wc = list()
 
-    wc[0] = wa_zero + 1. - alpha ** 2 + beta
+    wc.append(wa_zero + 1. - alpha ** 2 + beta)
     for i in range(1, 9):
-        wc[i] = 1. / 2 * alpha ** 2 * k
-    return np.array(wc)
+        wc.append(1. / 2 * alpha ** 2 * k)
+    return np.array(wc, dtype=float)
 
 
 def calc_a_matrix(c_pred):
@@ -110,14 +112,19 @@ def calc_z(index: int, sigma: np.ndarray):
     return np.array(zts).reshape(9, 4)
 
 
-def calc_z_mean():
+def calc_z_mean(index: int, sigma: np.ndarray):
     """
     Empirical mean.
 
     :return:
     """
+    z_mean = []
+    wa = calc_weights_wa()
+    z = calc_z(index, sigma)
+    for i, row in enumerate(z):
+        z_mean.append(wa[i] * row)
 
-    raise Exception("Not implemented")
+    return sum(z_mean)
 
 
 def calc_cross_covariance():
