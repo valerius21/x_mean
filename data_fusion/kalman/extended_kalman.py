@@ -74,7 +74,8 @@ def ekf_prediction_x(state):
                   'v': v_val,
                   'alpha': alpha_val}).T
     return np.asarray(
-        res
+        res,
+        dtype=float
     )
 
 
@@ -96,8 +97,16 @@ def measurement_y_k(state, rr, qq):
     """
     xx = state[0][0]
     yy = state[1][0]
-    res = h.subs({'x': xx, 'y': yy, 'r': rr, 'q': qq, 'v': v_val, 'alpha': alpha_val})
-    return res
+    return h_x(xx, yy, rr, qq)
+
+
+def h_x(xx, yy, rr, qq):
+    return h.subs({'x': xx,
+                   'y': yy,
+                   'r': rr,
+                   'q': qq,
+                   'v': v_val,
+                   'alpha': alpha_val})
 
 
 def K(cxx, H):

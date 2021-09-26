@@ -1,5 +1,8 @@
 import numpy as np
 
+from data_fusion.kalman.extended_kalman import h_x
+from data_fusion.utils.data_parsing import result
+
 """
 Constants
 """
@@ -13,15 +16,27 @@ Functions
 """
 
 
-def calc_sigma_points(x_pred, a_j) -> np.ndarray:
+def calc_sigma_points(x_pred, c_pred) -> np.ndarray:
     """
     Calculate the sigma points.
 
+    :param c_pred:
     :param x_pred: EKF point prediction.
-    :param a_j: j-th column of matrix A.
     :return: Matrix 4x9
     """
-    raise Exception("Not implemented")
+    A = calc_a_matrix(c_pred)
+    sigma = np.eye(4, 9).T
+    xx = x_pred.reshape(4)
+    sigma[0] = xx
+
+    for i in range(1, 5):
+        sigma[i] = xx + alpha * np.sqrt(k) * A[i - 1]
+
+    for i in range(5, 9):
+        j = i - 5
+        sigma[i] = xx - alpha * np.sqrt(k) * A[j]
+
+    return sigma.T
 
 
 def calc_weights_wa():
@@ -30,7 +45,12 @@ def calc_weights_wa():
 
     :return:
     """
-    raise Exception("Not implemented")
+    wa = list()
+
+    wa[0] = (alpha ** 2 * k - 4) / (alpha ** 2 * k)  # 4 is a dimension
+    for i in range(1, 9):
+        wa[i] = 1. / 2 * alpha ** 2 * k
+    return np.array(wa)
 
 
 def calc_weights_wc():
@@ -39,7 +59,14 @@ def calc_weights_wc():
 
     :return:
     """
-    raise Exception("Not implemented")
+    wa_zero = calc_weights_wa()[0]  # TODO: check if stackable
+
+    wc = list()
+
+    wc[0] = wa_zero + 1. - alpha ** 2 + beta
+    for i in range(1, 9):
+        wc[i] = 1. / 2 * alpha ** 2 * k
+    return np.array(wc)
 
 
 def calc_a_matrix(c_pred):
@@ -49,33 +76,38 @@ def calc_a_matrix(c_pred):
     :param c_pred:
     :return:
     """
-    raise Exception("Not implemented")
+    return np.linalg.cholesky(c_pred)
 
 
-def x_prediction_fn():
-    """
-    Prediction for $x_1, x_2$
-    :return:
-    """
-    raise Exception("Not implemented")
+def _r_fn(index: int, sigma: np.ndarray):
+    row = result[index]
+    ego_x = row[6][0]  # ego pose
+    ego_y = row[6][1]
+
+    lst = list()
+    for sig in sigma.T:
+        [s_x, s_y, _, _] = sig
+        lst.append(np.array([s_x - ego_x, s_y - ego_y], dtype=float))
+
+    return np.array(lst, dtype=float)
 
 
-def c_prediction_fn():
-    """
-    Covariance matrix of the prediction.
-
-    :return:
-    """
-    raise Exception("Not implemented")
-
-
-def calc_z():
+def calc_z(index: int, sigma: np.ndarray):
     """
     Calculate transformed points.
 
     :return:
     """
-    raise Exception("Not implemented")
+    rfn = _r_fn(index, sigma)
+    zts = []
+    for i, sig in enumerate(sigma.T):
+        zts.append(
+            np.asarray(
+                h_x(sig[0], sig[1], rfn[i][0], rfn[i][1]),
+                dtype=float)
+        )
+
+    return np.array(zts).reshape(9, 4)
 
 
 def calc_z_mean():
