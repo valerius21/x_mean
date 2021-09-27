@@ -203,34 +203,3 @@ h = Matrix([
 
 derivatives_h = [x, y, r, q]
 H = simplify(h.jacobian(derivatives_h))
-
-if __name__ == '__main__':
-    def update_predictions():
-        c_meas = cxx_init
-        x_meas = ekf_state(0)
-
-        collector = []
-
-        for i in range(37):
-            state = ekf_state(i)  # get x, y
-            x_pred = ekf_prediction_x(x_meas)  # calc a(^x^)
-            c_pred = ekf_prediction_c(c_meas)  # calc c with A_x and c init
-
-            [rr, qq] = r_fn(i)  # calc r1 and r2 (difference between object and ego_pose)
-            rr = rr[0]
-            qq = qq[0]
-
-            y_k = measurement_y_k(state, rr, qq)  # calculate h(x)
-            y_k_mean = measurement_y_k(x_pred, rr, qq)  # calc h(^x^)
-            H_jac = H_x(rr, qq, v_val, alpha_val)
-            kalman = K(c_pred, H_jac)
-            x_meas = ekf_measurement_x(x_pred, y_k, y_k_mean, kalman)
-            c_meas = ekf_measurement_c(c_pred, kalman, H_jac)
-            pred = np.array([x_meas[0], x_meas[1]])
-            collector.append(pred)
-
-        return np.array(collector, dtype=object)
-
-
-    predictions = update_predictions()
-    predictions

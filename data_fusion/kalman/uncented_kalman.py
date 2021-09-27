@@ -1,14 +1,20 @@
 import numpy as np
 
-from data_fusion.kalman.extended_kalman import h_x, a_x, cww as Q
+from data_fusion.kalman.extended_kalman import h_x, a_x, cww as Q, cxx_init, ekf_state
+from data_fusion.utils.data import base_data
 from data_fusion.utils.data_parsing import result
+from data_fusion.utils.helpers import get_missing
+
+"""
+Exercise 7 A
+"""
 
 """
 Constants
 """
 
 k = 1
-alpha = 10e-3
+alpha = 0.001
 beta = 2
 R_K = np.eye(4)
 
@@ -47,10 +53,10 @@ def calc_weights_wa() -> np.ndarray:
     :return:
     """
     f_wa = list()
-
-    f_wa.append((alpha ** 2 * k - 4) / (alpha ** 2 * k))  # 4 is a dimension
+    #
+    f_wa.append((((alpha ** 2) * k) - 4) / ((alpha ** 2) * k))  # 4 is a dimension
     for i in range(1, 9):
-        f_wa.append(1. / 2 * alpha ** 2 * k)
+        f_wa.append(1. / (2 * (alpha ** 2) * k))
     return np.array(f_wa, dtype=float)
 
 
@@ -65,9 +71,9 @@ def calc_weights_wc():
     """
     f_wc = list()
 
-    f_wc.append(wa[0] + 1. - alpha ** 2 + beta)
+    f_wc.append(wa[0] + 1. - (alpha ** 2) + beta)
     for i in range(1, 9):
-        f_wc.append(1. / 2 * alpha ** 2 * k)
+        f_wc.append(1. / (2 * (alpha ** 2) * k))
     return np.array(f_wc, dtype=float)
 
 
@@ -161,16 +167,17 @@ def x_prepare(sigma: np.ndarray) -> np.ndarray:
     x_acc = []
     for s_row in sigma.T:
         [xx, yy, _, _] = s_row
-        x_acc.append(a_x(xx, yy).reshape(1, 4))
+        a = a_x(xx, yy)
+        x_acc.append(a)
 
-    return np.array(x_acc, dtype=float)
+    return np.array(x_acc, dtype=float)  # .reshape(4, 9)
 
 
 def x_prediction(x_prep: np.ndarray) -> np.ndarray:
     x_acc = np.zeros((4, 1))
 
     for i, prep in enumerate(x_prep):
-        x_acc += wa[i] * prep.reshape(4, 1)
+        x_acc += wa[i] * prep
 
     return x_acc.reshape(4, 1)
 
@@ -178,11 +185,11 @@ def x_prediction(x_prep: np.ndarray) -> np.ndarray:
 def c_prediction(x_prep: np.ndarray, x_predicts: np.ndarray) -> np.ndarray:
     acc = np.zeros((4, 4))
 
-    for i, zz in enumerate(x_prep):
-        nz = zz.reshape(4, 1)
-        nz_mean = x_predicts.reshape(4, 1)
-        rz = nz - nz_mean
-        acc += wc[i] * (rz @ rz.T)
+    for i, prep in enumerate(x_prep):
+        part1 = (prep.reshape(4, 1) - x_predicts)
+        part2 = part1.T
+        part3 = part1 @ part2
+        acc += wc[i] * part3
 
     return acc + Q
 
@@ -222,3 +229,49 @@ def s_covariance(z: np.ndarray, z_mean: np.ndarray) -> np.ndarray:
         acc += wc[i] * (rz @ rz.T)
 
     return acc + R_K
+
+
+def update_predictions():
+    missing_samples = get_missing()
+    c_meas = cxx_init
+    x_init = ekf_state(0)
+
+    collector = []
+
+    x_meas = calc_sigma_points(x_init, c_meas)
+
+    for i in range(27):
+        # time
+        x_prep = x_prepare(x_meas)
+
+        x_predicts = x_prediction(x_prep)
+        c_predicts = c_prediction(c_meas, x_predicts)
+
+        if i in missing_samples:
+            continue
+
+        # update
+        gt_x = base_data[i]['gt_x']
+        gt_y = base_data[i]['gt_y']
+        gt_v = base_data[i]['v']
+        gt_alpha = base_data[i]['alpha']
+        gt = np.array([[gt_x], [gt_y], [gt_v], [gt_alpha]])
+        untransformed_sigma = calc_sigma_points(x_predicts, c_predicts)
+        sigma = calc_sigma_points(gt, c_predicts)  # x_meas statt gt?
+        zs = calc_z(i, sigma)
+        z_means = calc_z_mean(i, sigma)
+        s_cov = s_covariance(zs, z_means)
+        ccov = calc_cross_covariance(untransformed_sigma, x_predicts, zs, z_means)
+        kk = kalman_gain(ccov, s_cov)
+        x_meas = x_update(x_predicts, kk, zs, z_means)
+        c_meas = c_update(kk, s_cov, c_predicts)
+
+        est = np.array([x_predicts[0][0], x_predicts[1][0]])
+        collector.append(est)
+
+    return np.array(collector, dtype=float)
+
+
+if __name__ == '__main__':
+    predictions = update_predictions()
+    print(predictions)

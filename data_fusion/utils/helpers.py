@@ -3,6 +3,7 @@ from statistics import mean
 import numpy as np
 
 from data_fusion.definitions import SCENE_LENGTH
+from data_fusion.utils.data import base_data
 
 
 class NoRowException(Exception):
@@ -44,3 +45,10 @@ def reduce_measurement(row_index: int, base_data):
         raise ze
 
     return res
+
+
+def get_missing():
+    s = [r['row'] for r in base_data]
+    s = set(s)
+    ni = [i for i in range(37) if i not in s]
+    return ni
