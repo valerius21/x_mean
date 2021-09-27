@@ -53,11 +53,12 @@ def calc_weights_wa() -> np.ndarray:
     :return:
     """
     f_wa = list()
-    #
+
     f_wa.append((((alpha ** 2) * k) - 4) / ((alpha ** 2) * k))  # 4 is a dimension
     for i in range(1, 9):
         f_wa.append(1. / (2 * (alpha ** 2) * k))
     return np.array(f_wa, dtype=float)
+    # return np.array([1.0/9 for _ in range(9)])
 
 
 wa = calc_weights_wa()
@@ -69,12 +70,13 @@ def calc_weights_wc():
 
     :return:
     """
-    f_wc = list()
-
-    f_wc.append(wa[0] + 1. - (alpha ** 2) + beta)
-    for i in range(1, 9):
-        f_wc.append(1. / (2 * (alpha ** 2) * k))
-    return np.array(f_wc, dtype=float)
+    # f_wc = list()
+    #
+    # f_wc.append(wa[0] + 1. - (alpha ** 2) + beta)
+    # for i in range(1, 9):
+    #     f_wc.append(1. / (2 * (alpha ** 2) * k))
+    # return np.array(f_wc, dtype=float)
+    # return np.array([1.0/9 for _ in range(9)])
 
 
 wc = calc_weights_wc()
@@ -251,22 +253,16 @@ def update_predictions():
             continue
 
         # update
-        gt_x = base_data[i]['gt_x']
-        gt_y = base_data[i]['gt_y']
-        gt_v = base_data[i]['v']
-        gt_alpha = base_data[i]['alpha']
-        gt = np.array([[gt_x], [gt_y], [gt_v], [gt_alpha]])
-        untransformed_sigma = calc_sigma_points(x_predicts, c_predicts)
-        sigma = calc_sigma_points(gt, c_predicts)  # x_meas statt gt?
+        sigma = calc_sigma_points(x_predicts, c_predicts)
         zs = calc_z(i, sigma)
         z_means = calc_z_mean(i, sigma)
         s_cov = s_covariance(zs, z_means)
-        ccov = calc_cross_covariance(untransformed_sigma, x_predicts, zs, z_means)
-        kk = kalman_gain(ccov, s_cov)
+        cross_cov = calc_cross_covariance(sigma, x_predicts, zs, z_means)
+        kk = kalman_gain(cross_cov, s_cov)
         x_meas = x_update(x_predicts, kk, zs, z_means)
         c_meas = c_update(kk, s_cov, c_predicts)
 
-        est = np.array([x_predicts[0][0], x_predicts[1][0]])
+        est = np.array([x_meas[0][0], x_meas[1][0]])
         collector.append(est)
 
     return np.array(collector, dtype=float)
