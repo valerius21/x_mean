@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Mattfeld"
+  given-names: "Valerius"
+- family-names: "Vetter"
+  given-names: "Bianca"
+title: "Practical Course on Data Fusion, 2021."
+version: 0.0.1
+date-released: 2021-09-30
+url: "https://github.com/valerius21/x_mean"
